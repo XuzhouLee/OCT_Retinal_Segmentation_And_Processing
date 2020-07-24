@@ -6,39 +6,29 @@ Created on Wed Jul 15 10:11:38 2020
 """
 
 
-from collections import defaultdict
-import torch.nn.functional as F
+from keras import backend as K
 import time
 import copy
+import tensorflow as tf
 
 #We need define the dice loss function for this specific application
-def dice_loss(pred, target, smooth = 1e-7):
-    pred = pred.contiguous()
-    target = target.contiguous() 
-    target=target.float()
+def dice_coef(y_true, y_pred, smooth = 1):
+    y_true_f=K.flatten(y_true)
+    y_pred_f=K.flatten(y_pred)
+    intersection = K.sum(K.abs(y_true * y_pred), axis=-1)
+    return (2. * intersection + smooth) / (K.sum(K.square(y_true),-1) + K.sum(K.square(y_pred),-1) + smooth)
 
-    intersection = (pred * target).sum(dim=2).sum(dim=2)
-    
-    loss = (1 - ((2. * intersection + smooth) / (pred.sum(dim=2).sum(dim=2) + target.sum(dim=2).sum(dim=2) + smooth)))
-    return loss.mean()
+def dice_loss(y_true,y_pred,smooth=1):
+    return 1-dice_coef(y_true,y_pred,smooth=smooth)
 
 #Define the loss calculation of our training 
-def calc_loss(pred,target,metrics,bce_weight=0.5):
-    pred=pred.float()
-    target=target.float()
-    bce=F.binary_cross_entropy_with_logits(pred,target)
+def calc_loss(y_true,y_pred,metrics,sample_weights,bce_weight=0.5):
     
-    pred=F.sigmoid(pred)
-    
+    bce = tf.keras.losses.BinaryCrossentropy()
+    bec_loss=bce(y_true,y_pred,sample_weight=sample_weights).numpy()
     dice=dice_loss(pred,target)
     loss=bce*bce_weight+dice * (1-bce_weight)
-    metrics['bce'] += bce.data.cpu().numpy() *target.size(0)
-    metrics['dice'] += dice.data.cpu().numpy() * target.size(0)
-    metrics['loss'] += loss.data.cpu().numpy() *target.size(0) 
     return loss
-#Define a function which prints the loss we got
-def print_metrics(metrics, epoch_samples,phase):
-    outputs=[]
-    for k in metrics.keys():
-        outputs.append("{}:{:4f}".format(k,metrics[k]/epoch_samples))
-        print("{}:{}".format(phase,", ".join(outputs)))
+###############################################################
+def customized_loss(y_true,y_pred):
+    return (1*K.categorical_crossentropy(y_true, y_pred))+(0.5*dice_loss(y_true, y_pred))
