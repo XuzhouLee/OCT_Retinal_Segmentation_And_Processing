@@ -18,6 +18,8 @@ path = r"C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and pro
 image_sets=loadmat(path+r"\\resized_image.mat")['resized_images'];
 mask_sets=loadmat(path+r"\\resized_mask1.mat")['masks1'];
 weight_sets=loadmat(path+r"\\weighted_mask.mat")['weighted_samples'];
+image_sets[image_sets>250]=0;
+#%%
 ###############################################
 #Denoise the input images
 [m,n,l]=np.shape(image_sets);

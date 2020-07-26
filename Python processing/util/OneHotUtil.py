@@ -12,3 +12,11 @@ def onehot_initialization(mask):
     out[np.arange(mask.size),mask.ravel()] = 1
     out.shape = mask.shape + (ncols,)
     return out
+def onehot2int(image):
+    [m,n,l]=image.shape;
+    output=np.zeros((m,n))
+    for i in range(m):
+        for j in range(n):
+            index = np.argmax(image[i,j])
+            output[i,j]=index
+    return output

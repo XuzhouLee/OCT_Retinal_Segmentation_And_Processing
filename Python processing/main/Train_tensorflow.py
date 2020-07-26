@@ -24,8 +24,9 @@ mask_onehot_sets=[];
 resize_image=np.zeros((256,256,l))
 resize_mask=np.zeros((256,256,l))
 resize_weights=np.zeros((256,256,l))
+#%%
 for i in range(l):
-    temp=image_sets[:,:,i]
+    temp=image_sets[i,:,:]
     temp2=mask_sets[:,:,i]
     new=cv2.resize(temp,dsize=(256,256),interpolation=cv2.INTER_CUBIC)
     resize_image[:,:,i]=new
@@ -195,3 +196,13 @@ model.fit(train_image_random,train_lables,batch_size=10,epochs=200,validation_da
 model.load_weights(r"Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5")
 test_image=np.squeeze(train_image_random[28])
 plt.imshow(test_image)
+#%%
+from OneHotUtil import *
+test_image=test_image.reshape((1,256,256,1))
+prediction=model.predict(test_image)
+prediction=np.squeeze(prediction,axis=0)
+prediction=np.reshape(prediction,(256,256,8))
+prediction=np.round(prediction)
+predict_image=onehot2int(prediction)
+
+
