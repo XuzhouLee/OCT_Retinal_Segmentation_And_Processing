@@ -22,13 +22,15 @@ def dice_loss(y_true,y_pred,smooth=1):
     return 1-dice_coef(y_true,y_pred,smooth=smooth)
 
 #Define the loss calculation of our training 
+    """
 def calc_loss(y_true,y_pred,metrics,sample_weights,bce_weight=0.5):
     
     bce = tf.keras.losses.BinaryCrossentropy()
     bec_loss=bce(y_true,y_pred,sample_weight=sample_weights).numpy()
-    dice=dice_loss(pred,target)
+    dice=dice_loss(y,target)
     loss=bce*bce_weight+dice * (1-bce_weight)
     return loss
+    """
 ###############################################################
 def customized_loss(y_true,y_pred):
     return (1*K.categorical_crossentropy(y_true, y_pred))+(0.5*dice_loss(y_true, y_pred))

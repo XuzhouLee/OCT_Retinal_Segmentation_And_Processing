@@ -9,6 +9,7 @@ Created on Mon Jul 20 15:21:54 2020
 import sys
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\util')
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\model')
+sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\model')
 #%%
 #Loading pre-processed data#
 import matplotlib.pyplot as plt
@@ -55,6 +56,13 @@ mask_onehot_sets=np.array(mask_onehot_sets);
 #We should do image augmentation#
 #########################
 #We will see what happens and then come back to add this part
+"""
+def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image_color_mode="grayscale",mask_color_mode="grayscale",
+                   image_save_prefix="image",mask_save_prefix="mask",flag_multi_class=False,num_class=8,save_to_dir=None,target_size=(256,256),seed=1):
+    image_datagen=ImageData
+"""
+
+
 
 #%%
 #generate training sets
@@ -125,7 +133,30 @@ import re
 from scipy import ndimage, misc
 from numpy import unravel_index
 from operator import sub
+from RelayNet import *
+from keras import backend as K
+import tensorflow as tf
+import keras.backend.tensorflow_backend as tfback
+print("tf.__version__ is", tf.__version__)
+print("tf.keras.__version__ is:", tf.keras.__version__)
+
+def _get_available_gpus():
+    """Get a list of available gpu devices (formatted as strings).
+
+    # Returns
+        A list of available GPU devices.
+    """
+    #global _LOCAL_DEVICES
+    if tfback._LOCAL_DEVICES is None:
+        devices = tf.config.list_logical_devices()
+        tfback._LOCAL_DEVICES = [x.name for x in devices]
+    return [x for x in tfback._LOCAL_DEVICES if 'device:gpu' in x.lower()]
+tfback._get_available_gpus = _get_available_gpus
 data_shape=m*n;
+weight_decay_rate=0.0001
+model=RelayNet(weight_decay=weight_decay_rate);
+
+"""
 weight_decay=0.0001
 inputs=Input(shape=(m,n,1))
 #Build the model
@@ -167,8 +198,10 @@ L = Reshape((data_shape,8),input_shape = (m,n,8))(L24)
 L = Activation('softmax')(L)
 model = Model(inputs = inputs, outputs = L)
 model.summary()
+"""
 #%%
 sample_weights=np.reshape(train_weight_random,(train_num,data_shape))
+
 #Calcualte the weights of labels
 train_lables=np.reshape(train_mask_random,(train_num,data_shape,8))
 test_lables=np.reshape(test_masks,(l-train_num,data_shape,8))
@@ -184,13 +217,22 @@ scale=np.zeros(8)
 for i in range(8):
     scale[i]=(median)/count[i];
 weights=scale/scale[0]
+
 #%%
+#Test with RelayNet
 from loss_calculation import *
-optimiser=optimizers.Adam(lr=0.01)
-model.compile(optimizer=optimiser,loss=customized_loss,metrics=['accuracy',dice_coef],sample_weight_mode='temporal')
+#optimiser=optimizers.Adam(lr=0.01)
+#model.compile(optimizer=optimiser,loss=customized_loss,metrics=['accuracy',dice_coef],sample_weight_mode='temporal')
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 csv_logger=CSVLogger('Relaynet_sample_weights_no_augmentation.csv')
 model_checkpoint=ModelCheckpoint("Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
+model.fit(train_image_random,train_lables,batch_size=10,epochs=200,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
+#%%
+from UNet import *
+model=UNet();
+lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
+csv_logger=CSVLogger('UNET_no_kernel_regulizer_no_augmentation.csv')
+model_checkpoint=ModelCheckpoint("UNET_no_kernel_no_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
 model.fit(train_image_random,train_lables,batch_size=10,epochs=200,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
 #%%
 model.load_weights(r"Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5")
@@ -204,5 +246,5 @@ prediction=np.squeeze(prediction,axis=0)
 prediction=np.reshape(prediction,(256,256,8))
 prediction=np.round(prediction)
 predict_image=onehot2int(prediction)
-
+plt.imshow(predict_image)
 
