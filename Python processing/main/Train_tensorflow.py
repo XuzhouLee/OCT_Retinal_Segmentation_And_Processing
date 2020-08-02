@@ -9,7 +9,6 @@ Created on Mon Jul 20 15:21:54 2020
 import sys
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\util')
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\model')
-sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\model')
 #%%
 #Loading pre-processed data#
 import matplotlib.pyplot as plt
@@ -61,7 +60,19 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image
                    image_save_prefix="image",mask_save_prefix="mask",flag_multi_class=False,num_class=8,save_to_dir=None,target_size=(256,256),seed=1):
     image_datagen=ImageData
 """
-
+p = Augmentor.Pipeline("/path/to/images")
+# Point to a directory containing ground truth data.
+# Images with the same file names will be added as ground truth data
+# and augmented in parallel to the original data.
+p.ground_truth("/path/to/ground_truth_images")
+# Add operations to the pipeline as normal:
+p.rotate(probability=1, max_left_rotation=5, max_right_rotation=5)
+p.flip_left_right(probability=0.5)
+p.zoom_random(probability=0.5, percentage_area=0.8)
+p.flip_top_bottom(probability=0.5)
+p.sample(50)
+g = p.keras_generator(batch_size=128)
+images, labels = next(g)
 
 
 #%%
@@ -119,17 +130,14 @@ from keras.utils import to_categorical
 import tensorflow as tf
 from keras.callbacks import ReduceLROnPlateau, CSVLogger,EarlyStopping,ModelCheckpoint
 from keras.layers import Reshape
-
 from keras import backend as K
 from keras import regularizers, optimizers
-
 import scipy.io as scio
 import numpy as np    
 import os
 import matplotlib.pyplot as plt
 import math
 import re
-#from scipy.misc import imsave
 from scipy import ndimage, misc
 from numpy import unravel_index
 from operator import sub
@@ -205,6 +213,7 @@ sample_weights=np.reshape(train_weight_random,(train_num,data_shape))
 #Calcualte the weights of labels
 train_lables=np.reshape(train_mask_random,(train_num,data_shape,8))
 test_lables=np.reshape(test_masks,(l-train_num,data_shape,8))
+"""
 count=np.zeros(8)
 [m2,n2,l2]=np.shape(train_lables)
 for i in range(m2):
@@ -217,9 +226,10 @@ scale=np.zeros(8)
 for i in range(8):
     scale[i]=(median)/count[i];
 weights=scale/scale[0]
+"""
 
 #%%
-#Test with RelayNet
+#Training with RelayNet
 from loss_calculation import *
 #optimiser=optimizers.Adam(lr=0.01)
 #model.compile(optimizer=optimiser,loss=customized_loss,metrics=['accuracy',dice_coef],sample_weight_mode='temporal')
@@ -229,11 +239,11 @@ model_checkpoint=ModelCheckpoint("Relaynet_sample_weights_denoised_lr_e2_testing
 model.fit(train_image_random,train_lables,batch_size=10,epochs=200,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
 #%%
 from UNet import *
-model=UNet();
+model=UNet(weight_decay=weight_decay_rate);
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 csv_logger=CSVLogger('UNET_no_kernel_regulizer_no_augmentation.csv')
 model_checkpoint=ModelCheckpoint("UNET_no_kernel_no_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
-model.fit(train_image_random,train_lables,batch_size=10,epochs=200,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
+model.fit(train_image_random,train_lables,batch_size=10,epochs=100,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
 #%%
 model.load_weights(r"Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5")
 test_image=np.squeeze(train_image_random[28])
@@ -247,4 +257,24 @@ prediction=np.reshape(prediction,(256,256,8))
 prediction=np.round(prediction)
 predict_image=onehot2int(prediction)
 plt.imshow(predict_image)
-
+####################################
+#Start with UNET sturcutrure with a more specific defined training sets generator
+#%%
+from Image_augmentation import *
+from UNet import *
+data_gen_args=dict(rotation_range=0.2, width_shift_range=0.05, height_shift_range=0.05,
+                   shear_range=0.05,
+                   zoom_range=0.05,
+                   horizontal_flip=True,
+                   fill_mode='nearest')
+myGene=trainGenerator(16,r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Data\original_datasets','image','mask',data_gen_args,num_class=8,save_to_dir=None)
+model=unet();
+model_checkpoint=ModelCheckpoint('unet_oct_retinal_segmenation.hdf5',monitor='loss',verbose=1,save_best_only=True)
+image,mask=next(myGene)
+#model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[model_checkpoint])
+#%%
+image,mask=next(myGene)
+#%%
+print(np.shape(image))
+print(np.shape(mask))
+print(np.uni)

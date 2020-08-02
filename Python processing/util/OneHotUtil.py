@@ -5,7 +5,9 @@ Created on Wed Jul 15 10:05:07 2020
 @author: thuli
 """
 import numpy as np
-
+import skimage.io as io
+import os
+import copy
 def onehot_initialization(mask):
     ncols=8;
     out = np.zeros( (mask.size,ncols), dtype=np.int)
@@ -20,3 +22,31 @@ def onehot2int(image):
             index = np.argmax(image[i,j])
             output[i,j]=index
     return output
+
+def mask2weight(mask):
+    #please make sure the input mask is before onehotinitialization#
+    [m,n,l]=np.shape(mask)
+    output=copy.deepcopy(mask)
+    output=output.astype(np.float64)
+    output[output==0]=0
+    output[output==1]=11.459
+    output[output==2]=5.63
+    output[output==3]=11.007
+    output[output==4]=14.368 
+    output[output==5]=3.336
+    output[output==6]=13.647
+    output[output==7]=16.978
+    for i in range(l):
+        for j in range(m):
+            for k in range(n):
+                if (j!=0 and j!=m-1):
+                    if (mask[j+1,k]-mask[j,k]>0 and output[j,k]!=0):
+                        output[j,k]+=15
+    output=output+1;
+    return output
+    
+    
+
+    
+        
+    
