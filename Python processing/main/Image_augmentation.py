@@ -121,12 +121,14 @@ def geneTrainNpy(image_path,mask_path,flag_multi_class = False,num_class = 2,ima
     image_arr = np.array(image_arr)
     mask_arr = np.array(mask_arr)
     return image_arr,mask_arr
+'''
 def labelVisualize(num_class,color_dict,img):
     img = img[:,:,0] if len(img.shape) == 3 else img
     img_out = np.zeros(img.shape + (3,))
     for i in range(num_class):
         img_out[img == i,:] = color_dict[i]
     return img_out / 255
+'''
 def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
     for i,item in enumerate(npyfile):
         img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]

@@ -9,6 +9,7 @@ Created on Mon Jul 20 15:21:54 2020
 import sys
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\util')
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\model')
+sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\main')
 #%%
 #Loading pre-processed data#
 import matplotlib.pyplot as plt
@@ -50,30 +51,6 @@ for i in range(l):
     mask_onehot_sets.append(temp)
 mask_onehot_sets=np.array(mask_onehot_sets);
 #print(mask_onehot_sets[0])
-#%%
-######################
-#We should do image augmentation#
-#########################
-#We will see what happens and then come back to add this part
-"""
-def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image_color_mode="grayscale",mask_color_mode="grayscale",
-                   image_save_prefix="image",mask_save_prefix="mask",flag_multi_class=False,num_class=8,save_to_dir=None,target_size=(256,256),seed=1):
-    image_datagen=ImageData
-"""
-p = Augmentor.Pipeline("/path/to/images")
-# Point to a directory containing ground truth data.
-# Images with the same file names will be added as ground truth data
-# and augmented in parallel to the original data.
-p.ground_truth("/path/to/ground_truth_images")
-# Add operations to the pipeline as normal:
-p.rotate(probability=1, max_left_rotation=5, max_right_rotation=5)
-p.flip_left_right(probability=0.5)
-p.zoom_random(probability=0.5, percentage_area=0.8)
-p.flip_top_bottom(probability=0.5)
-p.sample(50)
-g = p.keras_generator(batch_size=128)
-images, labels = next(g)
-
 
 #%%
 #generate training sets
@@ -163,103 +140,57 @@ tfback._get_available_gpus = _get_available_gpus
 data_shape=m*n;
 weight_decay_rate=0.0001
 model=RelayNet(weight_decay=weight_decay_rate);
-
-"""
-weight_decay=0.0001
-inputs=Input(shape=(m,n,1))
-#Build the model
-###########################################################################
-#NEED TO BE DONE: SUMMARIZE THE MODEL AND THEN SAVE IT IN THE MODEL FOLDER#
-###########################################################################
-L1=Conv2D(64,kernel_size=(3,3),padding="same",kernel_regularizer=regularizers.l2(weight_decay))(inputs)
-L2=BatchNormalization()(L1)
-L2=Activation('relu')(L2)
-L3 = MaxPooling2D(pool_size=(2,2))(L2)
-L4 = Conv2D(64,kernel_size=(3,3),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L3)
-L5 = BatchNormalization()(L4)
-L5 = Activation('relu')(L5)
-L6 = MaxPooling2D(pool_size=(2,2))(L5)
-L7 = Conv2D(64,kernel_size=(3,3),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L6)
-L8 = BatchNormalization()(L7)
-L8 = Activation('relu')(L8)
-L9 = MaxPooling2D(pool_size=(2,2))(L8)
-L10 = Conv2D(64,kernel_size=(3,3),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L9)
-L11 = BatchNormalization()(L10)
-L11 = Activation('relu')(L11)
-L12 = UpSampling2D(size = (2,2))(L11)
-L13 = Concatenate(axis = 3)([L8,L12])
-L14 = Conv2D(64,kernel_size=(3,3),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L13)
-L15 = BatchNormalization()(L14)
-L15 = Activation('relu')(L15)
-L16 = UpSampling2D(size= (2,2))(L15)
-L17 = Concatenate(axis = 3)([L16,L5])
-L18 = Conv2D(64,kernel_size=(3,3),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L17)
-L19 = BatchNormalization()(L18)
-L19 = Activation('relu')(L19)
-L20 = UpSampling2D(size=(2,2),name = "Layer19")(L19)
-L21 = Concatenate(axis=3)([L20,L2])
-L22 = Conv2D(64,kernel_size=(3,3),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L21)
-L23 = BatchNormalization()(L22)
-L23 = Activation('relu')(L23)
-L24 = Conv2D(8,kernel_size=(1,1),padding = "same",kernel_regularizer=regularizers.l2(weight_decay))(L23)
-L = Reshape((data_shape,8),input_shape = (m,n,8))(L24)
-L = Activation('softmax')(L)
-model = Model(inputs = inputs, outputs = L)
-model.summary()
-"""
-#%%
 sample_weights=np.reshape(train_weight_random,(train_num,data_shape))
-
-#Calcualte the weights of labels
 train_lables=np.reshape(train_mask_random,(train_num,data_shape,8))
 test_lables=np.reshape(test_masks,(l-train_num,data_shape,8))
-"""
-count=np.zeros(8)
-[m2,n2,l2]=np.shape(train_lables)
-for i in range(m2):
-    for j in range(n2):
-        for k in range(l2):
-            if (train_lables[i,j,k]==1):
-                count[k]+=1
-median=np.median(count)
-scale=np.zeros(8)
-for i in range(8):
-    scale[i]=(median)/count[i];
-weights=scale/scale[0]
-"""
+
 
 #%%
-#Training with RelayNet
+#Training with RelayNet and original datasets
 from loss_calculation import *
-#optimiser=optimizers.Adam(lr=0.01)
-#model.compile(optimizer=optimiser,loss=customized_loss,metrics=['accuracy',dice_coef],sample_weight_mode='temporal')
+model=RelayNet(weight_decay=weight_decay_rate);
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 csv_logger=CSVLogger('Relaynet_sample_weights_no_augmentation.csv')
 model_checkpoint=ModelCheckpoint("Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
 model.fit(train_image_random,train_lables,batch_size=10,epochs=200,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
+#Training with UNET and original datasets
 #%%
 from UNet import *
-model=UNet(weight_decay=weight_decay_rate);
+model=unet();
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
-csv_logger=CSVLogger('UNET_no_kernel_regulizer_no_augmentation.csv')
-model_checkpoint=ModelCheckpoint("UNET_no_kernel_no_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
-model.fit(train_image_random,train_lables,batch_size=10,epochs=100,validation_data=(test_images,test_lables),sample_weight=sample_weights,callbacks=[lr_reducer,csv_logger,model_checkpoint])
+csv_logger=CSVLogger('UNET_original_datasets.csv')
+model_checkpoint=ModelCheckpoint("UNET_original_datasets.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
+model.fit(train_image_random,train_lables,batch_size=10,epochs=30,validation_data=(test_images,test_lables),callbacks=[lr_reducer,csv_logger,model_checkpoint])
 #%%
-model.load_weights(r"Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5")
-test_image=np.squeeze(train_image_random[28])
+from Image_augmentation import *
+#Let's see the predict result of the two models
+model1=RelayNet(weight_decay=weight_decay_rate);
+model1.load_weights(r"Relaynet_sample_weights_denoised_lr_e2_testing_bs_20.hdf5")
+test_image=np.squeeze(train_image_random[0])
 plt.imshow(test_image)
 #%%
 from OneHotUtil import *
 test_image=test_image.reshape((1,256,256,1))
-prediction=model.predict(test_image)
+prediction=model1.predict(test_image)
 prediction=np.squeeze(prediction,axis=0)
 prediction=np.reshape(prediction,(256,256,8))
 prediction=np.round(prediction)
 predict_image=onehot2int(prediction)
-plt.imshow(predict_image)
+predict_labels=labelVisualize(predict_image,'relay_net._prediction.png')
+plt.imshow(predict_labels)
+#%%
+model2=unet();
+model2.load_weights(r"UNET_original_datasets.hdf5");
+prediction2=model2.predict(test_image)
+prediction2=np.squeeze(prediction2,axis=0)
+prediction2=np.reshape(prediction2,(256,256,8))
+prediction2=np.round(prediction2)
+predict_image2=onehot2int(prediction2)
+predict_lable2=labelVisualize(predict_image2,'unet_prediction.png')
+plt.imshow(predict_lable2)
+#%%
 ####################################
 #Start with UNET sturcutrure with a more specific defined training sets generator
-#%%
 sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\main')
 from Image_augmentation import *
 from UNet import *
@@ -271,13 +202,12 @@ data_gen_args=dict(rotation_range=0.2, width_shift_range=0.05, height_shift_rang
 myGene=trainGenerator(4,r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Data\original_datasets','image','mask',data_gen_args,num_class=8,save_to_dir=None)
 model=unet();
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
-model_checkpoint=ModelCheckpoint('unet_oct_retinal_segmenation.hdf5',monitor='loss',verbose=1,save_best_only=True)
+model_checkpoint=ModelCheckpoint('unet_with_augmentation.hdf5',monitor='loss',verbose=1,save_best_only=True)
 model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[lr_reducer,model_checkpoint])
-#%%
 #Let's try the data generator with RelayNet
 weight_decay_rate=0.0001
 model=RelayNet(weight_decay=weight_decay_rate);
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 csv_logger=CSVLogger('Relaynet_sample_weights_with_augmentation.csv')
-model_checkpoint=ModelCheckpoint("Relaynet_sample_weights_denoised_lr_e2_testing_bs_20_with_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
+model_checkpoint=ModelCheckpoint("Relaynet_with_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
 model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[lr_reducer,csv_logger,model_checkpoint])
