@@ -25,7 +25,7 @@ def onehot2int(image):
 
 def mask2weight(mask):
     #please make sure the input mask is before onehotinitialization#
-    [m,n,l]=np.shape(mask)
+    [l,m,n]=np.shape(mask)
     output=copy.deepcopy(mask)
     output=output.astype(np.float64)
     output[output==0]=0
@@ -40,9 +40,10 @@ def mask2weight(mask):
         for j in range(m):
             for k in range(n):
                 if (j!=0 and j!=m-1):
-                    if (mask[j+1,k]-mask[j,k]>0 and output[j,k]!=0):
-                        output[j,k]+=15
+                    if (mask[i,j+1,k]-mask[i,j,k]>0 and output[i,j,k]!=0):
+                        output[i,j,k] +=15
     output=output+1;
+    output=np.reshape(output,(l,m*n))
     return output
     
     

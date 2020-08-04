@@ -50,10 +50,14 @@ def adjustData(img,mask,flag_multi_class,num_class):
     img = img / 255
     mask = mask[:,:,:,0] if(len(mask.shape) == 4) else mask[:,:,0]
     mask=np.round(mask/10)
+    weights=mask2weight(mask)
     mask=mask.astype(np.int32)
     new_mask=onehot_initialization(mask)
     mask=new_mask
-    return (img,mask)
+    size=np.shape(mask)
+    mask_flat=np.reshape(mask,(size[0],size[1]*size[2],size[3]))
+    mask_flat=mask_flat.astype(np.float64)
+    return (img,mask_flat,weights)
     
 ################################
 #Image Augmentation#
@@ -90,8 +94,9 @@ def trainGenerator(batch_size,train_path,image_folder,mask_folder,aug_dict,image
         seed = seed)
     train_generator = zip(image_generator, mask_generator)
     for (img,mask) in train_generator:
-        img,mask = adjustData(img,mask,flag_multi_class,num_class)
-        yield (img,mask)
+        img,mask,sample_weight = adjustData(img,mask,flag_multi_class,num_class)
+        yield(img,mask)
+        #yield (img,mask,sample_weight)
 ######################
 def testGenerator(test_path,num_image = 30,target_size = (256,256),flag_multi_class = False,as_gray = True):
     for i in range(num_image):

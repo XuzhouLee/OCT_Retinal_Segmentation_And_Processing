@@ -260,6 +260,7 @@ plt.imshow(predict_image)
 ####################################
 #Start with UNET sturcutrure with a more specific defined training sets generator
 #%%
+sys.path.append(r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Python processing\main')
 from Image_augmentation import *
 from UNet import *
 data_gen_args=dict(rotation_range=0.2, width_shift_range=0.05, height_shift_range=0.05,
@@ -267,14 +268,16 @@ data_gen_args=dict(rotation_range=0.2, width_shift_range=0.05, height_shift_rang
                    zoom_range=0.05,
                    horizontal_flip=True,
                    fill_mode='nearest')
-myGene=trainGenerator(16,r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Data\original_datasets','image','mask',data_gen_args,num_class=8,save_to_dir=None)
+myGene=trainGenerator(4,r'C:\Users\thuli\OneDrive - Umich\Desktop\OCT retinal segmenation and processing\Data\original_datasets','image','mask',data_gen_args,num_class=8,save_to_dir=None)
 model=unet();
+lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 model_checkpoint=ModelCheckpoint('unet_oct_retinal_segmenation.hdf5',monitor='loss',verbose=1,save_best_only=True)
-image,mask=next(myGene)
-#model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[model_checkpoint])
+model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[lr_reducer,model_checkpoint])
 #%%
-image,mask=next(myGene)
-#%%
-print(np.shape(image))
-print(np.shape(mask))
-print(np.uni)
+#Let's try the data generator with RelayNet
+weight_decay_rate=0.0001
+model=RelayNet(weight_decay=weight_decay_rate);
+lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
+csv_logger=CSVLogger('Relaynet_sample_weights_with_augmentation.csv')
+model_checkpoint=ModelCheckpoint("Relaynet_sample_weights_denoised_lr_e2_testing_bs_20_with_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
+model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[lr_reducer,csv_logger,model_checkpoint])
