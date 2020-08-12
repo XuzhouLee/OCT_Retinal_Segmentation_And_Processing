@@ -160,7 +160,7 @@ model=unet();
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 csv_logger=CSVLogger('UNET_original_datasets.csv')
 model_checkpoint=ModelCheckpoint("UNET_original_datasets.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
-model.fit(train_image_random,train_lables,batch_size=10,epochs=30,validation_data=(test_images,test_lables),callbacks=[lr_reducer,csv_logger,model_checkpoint])
+model.fit(train_image_random,train_lables,batch_size=4,epochs=30,validation_data=(test_images,test_lables),callbacks=[lr_reducer,csv_logger,model_checkpoint])
 #%%
 from Image_augmentation import *
 #Let's see the predict result of the two models
@@ -204,6 +204,7 @@ model=unet();
 lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 model_checkpoint=ModelCheckpoint('unet_with_augmentation.hdf5',monitor='loss',verbose=1,save_best_only=True)
 model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[lr_reducer,model_checkpoint])
+#%%
 #Let's try the data generator with RelayNet
 weight_decay_rate=0.0001
 model=RelayNet(weight_decay=weight_decay_rate);
@@ -211,3 +212,13 @@ lr_reducer=ReduceLROnPlateau(factor=0.5,cooldown=0,patience=6,min_lr=0.5e-6)
 csv_logger=CSVLogger('Relaynet_sample_weights_with_augmentation.csv')
 model_checkpoint=ModelCheckpoint("Relaynet_with_augmentation.hdf5",monitor='val_loss',verbose=1,save_best_only=True)
 model.fit_generator(myGene,steps_per_epoch=20,epochs=50,callbacks=[lr_reducer,csv_logger,model_checkpoint])
+#%%
+model2=unet();
+model2.load_weights(r"unet_with_augmentation.hdf5");
+prediction2=model2.predict(test_image)
+prediction2=np.squeeze(prediction2,axis=0)
+prediction2=np.reshape(prediction2,(256,256,8))
+prediction2=np.round(prediction2)
+predict_image2=onehot2int(prediction2)
+predict_lable2=labelVisualize(predict_image2,'unet_prediction.png')
+plt.imshow(predict_lable2)
